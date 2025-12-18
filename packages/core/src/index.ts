@@ -1,43 +1,21 @@
-export interface DeepLinkResult {
-  webUrl: string;
-  ios: string | null;
-  android: string | null;
-  platform: 'youtube' | 'linkedin' | 'unknown';
-}
+import { linkedinHandler, unknownHandler, youtubeHandler } from "./handlers";
+import { DeepLinkResult } from "./types";
 
+const handlers = [
+  youtubeHandler,
+  linkedinHandler,
+];
 export function generateDeepLink(url: string): DeepLinkResult {
   const webUrl = url.trim();
-  
-  const youtubeWatchMatch = webUrl.match(/youtube\.com\/watch\?v=([^&]+)/);
-  const youtubeShortMatch = webUrl.match(/youtu\.be\/([^?]+)/);
-  
-  if (youtubeWatchMatch || youtubeShortMatch) {
-    const videoId = youtubeWatchMatch ? youtubeWatchMatch[1] : youtubeShortMatch![1];
-    return {
-      webUrl,
-      ios: `vnd.youtube://watch?v=${videoId}`,
-      android: `intent://watch?v=${videoId}#Intent;scheme=vnd.youtube;package=com.google.android.youtube;end`,
-      platform: 'youtube'
-    };
+
+  for (const handler of handlers) {
+    const match = handler.match(webUrl);
+    if (match) {
+      return handler.build(webUrl, match);
+    }
   }
-  
-  const linkedinMatch = webUrl.match(/linkedin\.com\/in\/([^/?]+)/);
-  if (linkedinMatch) {
-    const profileId = linkedinMatch[1];
-    return {
-      webUrl,
-      ios: `linkedin://in/${profileId}`,
-      android: `intent://in/${profileId}#Intent;scheme=linkedin;package=com.linkedin.android;end`,
-      platform: 'linkedin'
-    };
-  }
-  
-  return {
-    webUrl,
-    ios: null,
-    android: null,
-    platform: 'unknown'
-  };
+
+  return unknownHandler(webUrl);
 }
 
 export function detectOS(): 'ios' | 'android' | 'desktop' {
